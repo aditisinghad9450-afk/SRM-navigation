@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reviews | SRM Navigator</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    #reviewsList {
+      margin-top: 20px;
+      width: 90%;
+      max-width: 500px;
+    }
+    .review-item {
+      background: var(--bg-card);
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      border-left: 4px solid var(--primary);
+      animation: fadeUp 0.5s ease;
+    }
+  </style>
+</head>
+<body>
+  <h2>Campus Reviews Corner</h2>
+  <form id="reviewForm">
+    <textarea id="reviewText" placeholder="Share your experience..."></textarea><br>
+    <button type="submit">Post</button>
+  </form>
+  
+  <hr style="width: 80%; margin: 20px 0; border-color: rgba(255,255,255,0.1);">
+
+  <h3>What others are saying:</h3>
+  <div id="reviewsList">
+    </div>
+
+  <script>
+    const API_URL = "http://localhost:8080/api";
+    const reviewForm = document.getElementById("reviewForm");
+    const reviewsList = document.getElementById("reviewsList");
+    const reviewText = document.getElementById("reviewText");
+
+    // 1. Load existing reviews when page opens
+    async function loadReviews() {
+      try {
+        const res = await fetch(`${API_URL}/reviews`);
+        const reviews = await res.json();
+        
+        reviewsList.innerHTML = ""; // Clear list
+        if (reviews.length === 0) {
+          reviewsList.innerHTML = "<p>Be the first to leave a review!</p>";
+        }
+
+        reviews.forEach(review => {
+          const div = document.createElement("div");
+          div.classList.add("review-item");
+          div.textContent = review.text; // 'text' matches our Review.java entity
+          reviewsList.prepend(div); // Show newest first
+        });
+      } catch (err) {
+        reviewsList.innerHTML = "<p style='color:red;'>Could not load reviews.</p>";
+      }
+    }
+
+    // 2. Handle new review submission
+    reviewForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const review = reviewText.value;
+      if (!review) return;
+
+      try {
+        await fetch(`${API_URL}/reviews`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ review: review })
+        });
+        
+        reviewText.value = ""; // Clear textbox
+        loadReviews(); // Refresh the list
+      
+      } catch (err) {
+        alert("Failed to submit review. Is the server running?");
+      }
+    });
+
+    // Initial load
+    loadReviews();
+  </script>
+</body>
+</html>

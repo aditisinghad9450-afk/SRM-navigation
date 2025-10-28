@@ -1,0 +1,29 @@
+srm-navigation-project/
+├── pom.xml
+└── src/
+    └── main/
+        ├── java/
+        │   └── com/
+        │       └── srm/
+        │           └── navigation/
+        │               ├── NavigationApplication.java
+        │               ├── config/
+        │               │   └── DataInitializer.java
+        │               ├── controller/
+        │               │   └── ApiController.java
+        │               ├── entity/
+        │               │   ├── Location.java
+        │               │   ├── Review.java
+        │               │   └── User.java
+        │               └── repository/
+        │                   ├── LocationRepository.java
+        │                   ├── ReviewRepository.java
+        │                   └── UserRepository.java
+        │
+        └── resources/
+            ├── application.properties
+            └── static/
+                ├── index.html
+                ├── chatbot.html
+                ├── reviews.html
+                └── style.css

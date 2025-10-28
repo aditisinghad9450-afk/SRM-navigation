@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campus Navigation System</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+
+<link rel="stylesheet" href="style.css" />
+
+<style>
+/* ---------------------------------- */
+/* --- LOGIN & MAP STYLES --- */
+/* ---------------------------------- */
+/* Body (specific to this page) */
+body {
+  margin: 0;
+  font-family: "Poppins", Arial, sans-serif;
+  background: #111;
+  color: #fff;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* Prevent body scroll */
+}
+
+/* Login modal overlay */
+#login-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+#login-box {
+  background: #111;
+  padding: 40px;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 0 0 25px rgba(0,255,204,0.6);
+}
+#login-box h2 {
+  margin-bottom: 20px;
+  color: #00ffcc;
+  font-family: 'Trebuchet MS', sans-serif;
+}
+#login-box input {
+  width: 250px;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 5px;
+  border: 1px solid #00ffcc;
+  outline: none;
+  color: #000;
+}
+#login-box button {
+  width: 270px;
+  padding: 10px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  background: #00ffcc;
+  color: #000;
+  font-weight: bold;
+}
+#login-box button:hover {
+  background: #00cc99;
+}
+#login-error {
+  color: red;
+  font-size: 0.9rem;
+  height: 20px;
+}
+
+/* Main App Container */
+#app-container {
+  display: none; /* Hidden until logged in */
+  width: 100%;
+  height: 100vh;
+  flex-direction: column;
+}
+
+/* New Navigation Bar */
+#main-nav {
+  width: 100%;
+  background: linear-gradient(90deg, #000, #141414, #000);
+  padding: 10px 0;
+  text-align: center;
+  border-bottom: 3px solid #00ffcc;
+  flex-shrink: 0;
+}
+#main-nav button {
+  background: #00ffcc;
+  color: #000;
+  border: none;
+  padding: 8px 16px;
+  margin: 0 10px;
+  border-radius: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1rem;
+}
+#main-nav button:hover {
+  background: #fff;
+}
+
+/* Page Container */
+#page-container {
+  width: 100%;
+  flex-grow: 1;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at top left, #1e293b, #0f172a 70%);
+}
+
+/* This class hides pages */
+.page {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none; /* All pages are hidden by default */
+  align-items: center;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* This class shows the active page */
+.page.active {
+  display: flex;
+}
+
+/* Map frame */
+.map-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  border: none;
+  background: #000;
+}
+/* Header */
+.header-bar {
+  width: 100%;
+  text-align: center;
+  background: #000;
+  color: #00ffcc;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 12px 0;
+  font-family: 'Trebuchet MS', sans-serif;
+  position: relative;
+}
+/* Map */
+#map { height: calc(100% - 60px); width: 100%; }
+/* Search */
+#search-box {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: white;
+  border-radius: 8px;
+  padding: 8px;
+  width: 320px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+#search-input { width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc; outline: none; color: #000; background: #fff; }
+#suggestions { max-height: 200px; overflow-y: auto; }
+#suggestions div { padding: 6px; cursor: pointer; border-radius: 5px; color: #000; background: #fff; }
+#suggestions div:hover { background: #f0f0f0; }
+/* Controls */
+#bottom-right-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#bottom-right-controls button {
+  width: 50px;
+  height: 50px;
+  font-size: 22px;
+  background: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+/* ---------------------------------- */
+/* --- CHATBOT STYLES (Merged) --- */
+/* ---------------------------------- */
+.chat-container {
+  width: 90%;
+  max-width: 500px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 15px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  height: 70vh;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+.bubble {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-radius: 20px;
+  max-width: 75%;
+  word-wrap: break-word;
+}
+.user {
+  background: var(--gradient);
+  align-self: flex-end;
+  color: white;
+}
+.bot {
+  background: rgba(255,255,255,0.1);
+  align-self: flex-start;
+  color: #e5e7eb;
+}
+.input-area {
+  display: flex;
+  width: 90%;
+  max-width: 500px;
+  margin-top: 15px;
+  gap: 10px;
+}
+/* Overriding style.css for chat input/button */
+#page-chatbot input {
+  flex: 1;
+  padding: 12px;
+  border-radius: 20px;
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 1rem;
+}
+#page-chatbot button {
+  background: var(--gradient);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.typing {
+  font-style: italic;
+  opacity: 0.8;
+  margin-left: 10px;
+}
+
+/* ---------------------------------- */
+/* --- REVIEWS STYLES (Merged) --- */
+/* ---------------------------------- */
+#reviewsList {
+  margin-top: 20px;
+  width: 90%;
+  max-width: 500px;
+}
+.review-item {
+  background: var(--bg-card);
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  border-left: 4px solid var(--primary);
+}
+</style>
+</head>
+<body>
+
+<div id="login-modal">
+  <div id="login-box">
+    <h2>Login to Campus Navigator</h2>
+    <input type="text" id="email" placeholder="Email (admin@srm.com)"><br>
+    <input type="password" id="password" placeholder="Password (12345)"><br>
+    <div id="login-error"></div>
+    <button onclick="login()">Login</button><br>
+    <button onclick="guestLogin()">Continue as Guest</button>
+  </div>
+</div>
+
+<div id="app-container">
+
+  <nav id="main-nav">
+    <button onclick="showPage('page-map')">🗺️ Map</button>
+    <button onclick="showPage('page-chatbot')">🤖 Chatbot</button>
+    <button onclick="showPage('page-reviews')">⭐ Reviews</button>
+  </nav>
+
+  <div id="page-container">
+
+    <div id="page-map" class="page active">
+      <div class="map-frame">
+        <div class="header-bar">🧭 CAMPUS NAVIGATOR</div>
+        <div id="search-box">
+          <input type="text" id="search-input" placeholder="Search destination...">
+          <div id="suggestions"></div>
+        </div>
+        <div id="map"></div>
+        <div id="bottom-right-controls">
+          <button onclick="resetMap()">🔄</button>
+          <button onclick="recenterMap()">📍</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-chatbot" class="page">
+      <h2>🧠 Ask Me Anything!</h2>
+      <div class="chat-container" id="chatContainer">
+        <div class="bubble bot">Hi! 👋 I'm your SRM Campus Assistant. Ask me anything!</div>
+      </div>
+      <div class="input-area">
+        <input type="text" id="userInput" placeholder="Type a message..." />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+    <div id="page-reviews" class="page">
+      <h2>Campus Reviews Corner</h2>
+      <form id="reviewForm">
+        <textarea id="reviewText" placeholder="Share your experience..."></textarea><br>
+        <button type="submit">Post</button>
+      </form>
+      <hr style="width: 80%; margin: 20px 0; border-color: rgba(255,255,255,0.1);">
+      <h3>What others are saying:</h3>
+      <div id="reviewsList"></div>
+    </div>
+
+  </div> </div> <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+<script>
+// --- Global API URL ---
+const API_URL = "http://localhost:8080/api";
+let map; // Global variable to hold the map instance
+
+// ----------------------------------
+// --- PAGE NAVIGATION ---
+// ----------------------------------
+function showPage(pageId) {
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(page => {
+    page.classList.remove('active');
+  });
+  // Show the requested page
+  document.getElementById(pageId).classList.add('active');
+
+  // SPECIAL CASE: If showing map, invalidate size
+  if (pageId === 'page-map' && map) {
+    map.invalidateSize();
+  }
+}
+
+// ----------------------------------
+// --- AUTHENTICATION ---
+// ----------------------------------
+async function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const errorDiv = document.getElementById("login-error");
+  errorDiv.textContent = "Logging in...";
+
+  try {
+    const res = await fetch(`${API_URL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, password: password })
+    });
+    const data = await res.json();
+
+    if (data.status === "success") {
+      showApp();
+    } else {
+      errorDiv.textContent = data.message || "Invalid credentials!";
+    }
+  } catch (err) {
+    errorDiv.textContent = "Cannot connect to server.";
+  }
+}
+
+function guestLogin() {
+  showApp();
+}
+
+function showApp() {
+  document.getElementById("login-modal").style.display = "none";
+  document.getElementById("app-container").style.display = "flex";
+  // Initialize all parts of the app
+  initMap();
+  loadReviews(); // Load reviews now
+}
+
+// ----------------------------------
+// --- MAP SCRIPT ---
+// ----------------------------------
+async function initMap() {
+  const SRM_CENTER = [12.8230, 80.0459];
+  map = L.map('map').setView(SRM_CENTER, 16);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  let markers = [], routingControl = null, userLatLng = null, userMarker = null;
+  
+  try {
+    const res = await fetch(`${API_URL}/locations`);
+    const locations = await res.json();
+    locations.forEach(loc => {
+      const customIcon = L.icon({ 
+        iconUrl: loc.iconUrl, 
+        iconSize: [32, 32] 
+      });
+      const popupContent = `<b>${loc.name}</b><br>${loc.info}<br><br>
+        <button class="map-route-btn" data-lat="${loc.lat}" data-lng="${loc.lng}">📍 Get Directions</button>`;
+      const marker = L.marker([loc.lat, loc.lng], { icon: customIcon })
+        .addTo(map)
+        .bindPopup(popupContent);
+      markers.push(marker);
+    });
+  } catch (err) {
+    console.error("Failed to fetch locations", err);
+  }
+
+  function locateUser() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      userLatLng = L.latLng(lat, lng);
+      if(userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker(userLatLng).addTo(map)
+        .bindPopup("📍 You are here").openPopup();
+      map.setView(userLatLng, 17);
+    });
+  }
+  locateUser();
+
+  window.recenterMap = function() {
+    if(userLatLng){ map.setView(userLatLng,17); userMarker.openPopup(); }
+    else locateUser();
+  }
+  window.resetMap = function() {
+    map.setView(SRM_CENTER,16);
+    if(routingControl){ map.removeControl(routingControl); routingControl=null; }
+    markers.forEach(m=>m.closePopup());
+  }
+
+  // Event delegation for routing buttons
+  map.on('popupopen', function(e) {
+    var btn = e.popup._container.querySelector('.map-route-btn');
+    if (btn) {
+      btn.addEventListener('click', function() {
+        const lat = this.dataset.lat;
+        const lng = this.dataset.lng;
+        if(!userLatLng){ alert("Locate yourself first!"); return; }
+        const dest = L.latLng(lat,lng);
+        if(routingControl) map.removeControl(routingControl);
+        routingControl = L.Routing.control({
+          waypoints: [userLatLng,dest],
+          router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
+          lineOptions:{ styles:[{color:'blue', weight:5, opacity:0.7}] },
+          addWaypoints:false,
+          draggableWaypoints:false,
+          show:false
+        }).addTo(map);
+      });
+    }
+  });
+
+  // Search
+  const searchInput = document.getElementById("search-input");
+  const suggestionsBox = document.getElementById("suggestions");
+  let searchTimeout;
+  searchInput.addEventListener("input", () => {
+    clearTimeout(searchTimeout);
+    const query = searchInput.value.trim();
+    if(query.length <3){ suggestionsBox.innerHTML=""; return; }
+    searchTimeout = setTimeout(()=>{
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
+      .then(res=>res.json())
+      .then(data=>{
+        suggestionsBox.innerHTML="";
+        data.forEach(place=>{
+          const div = document.createElement("div");
+          div.textContent = place.display_name;
+          div.onclick = ()=>{
+            const destLatLng = L.latLng(place.lat, place.lon);
+            map.setView(destLatLng,17);
+            L.marker(destLatLng).addTo(map).bindPopup(place.display_name).openPopup();
+            // No automatic routing on search click, user can click popup
+            suggestionsBox.innerHTML="";
+            searchInput.value="";
+          };
+          suggestionsBox.appendChild(div);
+        });
+      }).catch(()=>{ suggestionsBox.innerHTML="<div style='padding:6px;color:red;'>Error fetching results</div>"; });
+    },400);
+  });
+}
+
+// ----------------------------------
+// --- CHATBOT SCRIPT ---
+// ----------------------------------
+const chatContainer = document.getElementById("chatContainer");
+
+async function sendMessage() {
+  const input = document.getElementById("userInput");
+  const userMsg = input.value.trim();
+  if (!userMsg) return;
+
+  appendMessage(userMsg, "user");
+  input.value = "";
+  showTyping();
+
+  try {
+    const res = await fetch(`${API_URL}/chatbot`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: userMsg })
+    });
+    const data = await res.json();
+    hideTyping();
+    appendMessage(data.reply || "Sorry, I didn’t get that 🥲", "bot");
+  } catch (error) {
+    hideTyping();
+    appendMessage("⚠️ Backend not connected! Please start your Java Spring server.", "bot");
+  }
+}
+
+function appendMessage(text, type) {
+  const bubble = document.createElement("div");
+  bubble.classList.add("bubble", type);
+  bubble.textContent = text;
+  chatContainer.appendChild(bubble);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function showTyping() {
+  const typing = document.createElement("div");
+  typing.classList.add("bubble", "bot", "typing");
+  typing.textContent = "Bot is typing...";
+  typing.id = "typingIndicator";
+  chatContainer.appendChild(typing);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function hideTyping() {
+  const typing = document.getElementById("typingIndicator");
+  if (typing) typing.remove();
+}
+
+// ----------------------------------
+// --- REVIEWS SCRIPT ---
+// ----------------------------------
+const reviewForm = document.getElementById("reviewForm");
+const reviewsList = document.getElementById("reviewsList");
+const reviewText = document.getElementById("reviewText");
+
+async function loadReviews() {
+  try {
+    const res = await fetch(`${API_URL}/reviews`);
+    const reviews = await res.json();
+    
+    reviewsList.innerHTML = "";
+    if (reviews.length === 0) {
+      reviewsList.innerHTML = "<p>Be the first to leave a review!</p>";
+    }
+    reviews.forEach(review => {
+      const div = document.createElement("div");
+      div.classList.add("review-item");
+      div.textContent = review.text;
+      reviewsList.prepend(div);
+    });
+  } catch (err) {
+    reviewsList.innerHTML = "<p style='color:red;'>Could not load reviews.</p>";
+  }
+}
+
+reviewForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const review = reviewText.value;
+  if (!review) return;
+
+  try {
+    await fetch(`${API_URL}/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ review: review })
+    });
+    reviewText.value = "";
+    loadReviews();
+  } catch (err) {
+    alert("Failed to submit review. Is the server running?");
+  }
+});
+
+</script>
+</body>
+</html>

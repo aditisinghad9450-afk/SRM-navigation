@@ -1,0 +1,9 @@
+com\srm\navigation\repository\LocationRepository.class
+com\srm\navigation\controller\ApiController.class
+com\srm\navigation\repository\UserRepository.class
+com\srm\navigation\NavigationApplication.class
+com\srm\navigation\entity\User.class
+com\srm\navigation\entity\Location.class
+com\srm\navigation\repository\ReviewRepository.class
+com\srm\navigation\config\DataInitializer.class
+com\srm\navigation\entity\Review.class

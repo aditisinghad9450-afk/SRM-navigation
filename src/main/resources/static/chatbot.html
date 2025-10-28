@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chatbot | SRM Navigator</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ... (all your specific chatbot styles from the file) ... */
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: radial-gradient(circle at top left, #1e293b, #0f172a);
+      color: #fff;
+    }
+
+    .chat-container {
+      width: 90%;
+      max-width: 500px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 15px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      height: 70vh;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+
+    .bubble {
+      margin: 10px 0;
+      padding: 10px 14px;
+      border-radius: 20px;
+      max-width: 75%;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .user {
+      background: var(--gradient); /* From style.css */
+      align-self: flex-end;
+      color: white;
+    }
+
+    .bot {
+      background: rgba(255,255,255,0.1);
+      align-self: flex-start;
+      color: #e5e7eb;
+    }
+
+    .input-area {
+      display: flex;
+      width: 90%;
+      max-width: 500px;
+      margin-top: 15px;
+      gap: 10px;
+    }
+
+    input { /* Overrides style.css for chat */
+      flex: 1;
+      padding: 12px;
+      border-radius: 20px;
+      border: none;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      font-size: 1rem;
+    }
+
+    button { /* Overrides style.css for chat */
+      background: var(--gradient); /* From style.css */
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(79,70,229,0.5);
+    }
+
+    .typing {
+      font-style: italic;
+      opacity: 0.8;
+      margin-left: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <h2>🧠 Ask Me Anything — I Speak Every Indian Language!</h2>
+
+  <div class="chat-container" id="chatContainer">
+    <div class="bubble bot">Hi! 👋 I'm your SRM Campus Assistant. Ask me anything!</div>
+  </div>
+
+  <div class="input-area">
+    <input type="text" id="userInput" placeholder="Type in any Indian language..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    const chatContainer = document.getElementById("chatContainer");
+
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const userMsg = input.value.trim();
+      if (!userMsg) return;
+
+      appendMessage(userMsg, "user");
+      input.value = "";
+
+      showTyping();
+
+      try {
+        const res = await fetch("http://localhost:8080/api/chatbot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userMsg })
+        });
+        const data = await res.json();
+        hideTyping();
+        appendMessage(data.reply || "Sorry, I didn’t get that 🥲", "bot");
+      } catch (error) {
+        hideTyping();
+        appendMessage("⚠️ Backend not connected! Please start your Java Spring server.", "bot");
+      }
+    }
+
+    function appendMessage(text, type) {
+      const bubble = document.createElement("div");
+      bubble.classList.add("bubble", type);
+      bubble.textContent = text;
+      chatContainer.appendChild(bubble);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function showTyping() {
+      const typing = document.createElement("div");
+      typing.classList.add("bubble", "bot", "typing");
+      typing.textContent = "Bot is typing...";
+      typing.id = "typingIndicator";
+      chatContainer.appendChild(typing);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function hideTyping() {
+      const typing = document.getElementById("typingIndicator");
+      if (typing) typing.remove();
+    }
+  </script>
+</body>
+</html>
